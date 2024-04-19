@@ -1,3 +1,4 @@
+apt-get update && apt install -y byobu && \
 python -m venv mainenv && . mainenv/bin/activate && pip install -e . && \
 python -m venv vllm && . vllm/bin/activate && pip install vllm && \
 . generation_models/comfyui_helper/install_comfyui.sh && . generation_models/comfyui_helper/scripts/download_antelopev2.sh && \
