@@ -5,7 +5,9 @@ from typing import Optional
 from transformers import set_seed
 import httpx
 import random
-
+from datasets import load_dataset
+import random
+import time
 
 class Prompt(BaseModel, extra=Extra.allow):
     prompt: str
@@ -30,30 +32,20 @@ def get_args():
 
 class ChallengeImage:
     def __init__(self):
+        self.captions = self.init_caption()
+        print(f"Total captions: {len(self.captions)}", flush=True)
         self.app = FastAPI()
-        self.app.add_api_route("/", self.__call__, methods=["POST"])
-
+        self.app.add_api_route("/", self.__call__, methods=["GET"])
+    def init_caption(self):
+        gpt4v_220k = load_dataset("toilaluan/livis-gpt4v-laicon-coco-aes-caption")
+        captions = gpt4v_220k['train']['caption']
+        return captions
     async def __call__(
         self,
-        data: Prompt,
     ):
-        data = dict(data)
-        seed = random.randint(0, 1e9)
-        set_seed(seed)
-        prompt = data["prompt"]
-        if not prompt:
-            prompt = "an image of "
-        async with httpx.AsyncClient() as httpx_client:
-            response = await httpx_client.post(
-                "http://localhost:8000/v1/completions",
-                json={
-                    "prompt": [prompt],
-                    "model": "LykosAI/GPT-Prompt-Expansion-Fooocus-v2",
-                    "max_tokens": 77,
-                },
-            )
-        prompt_completion = response.json()["choices"][0]["text"].strip()
-        prompt = prompt + prompt_completion
+        start = time.time()
+        prompt = random.choice(self.captions)
+        print(f"Time taken: {time.time()-start}", flush=True)
         return {"prompt": prompt}
 
 
