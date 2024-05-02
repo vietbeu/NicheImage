@@ -35,13 +35,13 @@ class ChallengeImage:
         self.captions = self.init_caption()
         print(f"Total captions: {len(self.captions)}", flush=True)
         self.app = FastAPI()
-        self.app.add_api_route("/", self.__call__, methods=["GET"])
+        self.app.add_api_route("/", self.__call__, methods=["POST"])
     def init_caption(self):
         gpt4v_220k = load_dataset("toilaluan/livis-gpt4v-laicon-coco-aes-caption")
         captions = gpt4v_220k['train']['caption']
         return captions
     async def __call__(
-        self,
+        self, data: dict,
     ):
         start = time.time()
         prompt = random.choice(self.captions)
