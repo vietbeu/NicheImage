@@ -32,19 +32,24 @@ def get_args():
 
 class ChallengeImage:
     def __init__(self):
-        self.captions = self.init_caption()
+        self.captions, self.templates = self.init_caption()
         print(f"Total captions: {len(self.captions)}", flush=True)
         self.app = FastAPI()
         self.app.add_api_route("/", self.__call__, methods=["POST"])
     def init_caption(self):
         gpt4v_220k = load_dataset("toilaluan/livis-gpt4v-laicon-coco-aes-caption")
         captions = gpt4v_220k['train']['caption']
-        return captions
+        with open("services/challenge_generating/prompt_generating/template.txt", "r") as f:
+            templates = f.readlines()
+            templates = [template.strip() for template in templates]
+        return captions, templates
     async def __call__(
         self, data: dict,
     ):
         start = time.time()
         prompt = random.choice(self.captions)
+        template = random.choice(self.templates)
+        prompt = template.replace("{{prompt}}", prompt)
         print(f"Time taken: {time.time()-start}", flush=True)
         return {"prompt": prompt}
 
