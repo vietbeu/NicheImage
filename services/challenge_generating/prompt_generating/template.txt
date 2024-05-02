@@ -2,28 +2,14 @@
 {{prompt}}, art nouveau style, intricate patterns, elegant curves, gold accents, inspired by Alphonse Mucha, 8k resolution
 {{prompt}}, pixel art, 8-bit, retro gaming style, vibrant colors, isometric view, art by Paul Robertson and Henk Nieborg
 {{prompt}}, ukiyo-e woodblock print, Japanese art style, flat colors, bold outlines, art by Hokusai and Hiroshige, high resolution
-{{prompt}}, art deco poster, geometric shapes, bold typography, limited color palette, inspired by Cassandre and Loupot, 4k
 {{prompt}}, surrealism, dream-like imagery, unexpected juxtapositions, art by Salvador Dalí and René Magritte, highly detailed, 8k
 {{prompt}}, minimalist vector art, simple shapes, clean lines, limited color palette, flat design, high resolution
 {{prompt}}, comic book style, halftone dots, bold inking, dynamic composition, art by Jack Kirby and Steve Ditko, 4k resolution
-{{prompt}}, impressionism, loose brushstrokes, play of light, soft colors, art by Monet, Renoir, and Pissarro, highly detailed
-{{prompt}}, art brut, raw and spontaneous, outsider art style, unconventional materials, inspired by Jean Dubuffet, 8k
-{{prompt}}, abstract expressionism, gestural brushstrokes, color fields, art by Jackson Pollock and Mark Rothko, high resolution
-{{prompt}}, pop art, bright colors, bold outlines, Ben-Day dots, art by Andy Warhol and Roy Lichtenstein, 4k resolution
-{{prompt}}, engraving, crosshatching, fine lines, high contrast, inspired by Albrecht Dürer and Gustave Doré, highly detailed
-{{prompt}}, op art, optical illusions, geometric patterns, black and white, art by Bridget Riley and Victor Vasarely, 8k
-{{prompt}}, art by Hayao Miyazaki and Studio Ghibli, soft colors, whimsical style, hand-drawn, highly detailed, 4k resolution
-{{prompt}}, stained glass, vibrant colors, lead lines, intricate patterns, inspired by Gothic cathedrals, high resolution
-{{prompt}}, art by Frida Kahlo, surrealism, symbolism, vibrant colors, Mexican folk art influences, highly detailed, 8k
-{{prompt}}, art by M.C. Escher, impossible objects, tessellations, mathematical precision, black and white, 4k resolution
-{{prompt}}, art by Zaha Hadid, parametric design, organic forms, futuristic architecture, highly detailed, 8k resolution
-{{prompt}}, art by Banksy, street art, stencil graffiti, political commentary, urban setting, high resolution, 4k
-{{prompt}}, art by Yayoi Kusama, polka dots, infinity mirrors, immersive installations, psychedelic colors, 8k resolution
-{{prompt}}, art by Kehinde Wiley, photorealistic portraiture, ornate floral backgrounds, African diaspora, highly detailed, 4k
-{{prompt}}, art by Takashi Murakami, superflat, anime-inspired, vibrant colors, pop culture references, high resolution, 8k
-{{prompt}}, art by Katsushika Hokusai, "The Great Wave off Kanagawa", Japanese ukiyo-e style, blue and white, highly detailed, 4k
-{{prompt}}, art by H.R. Giger, biomechanical, surrealism, dark and dystopian, inspired by "Alien" franchise, 8k resolution
-{{prompt}}, wildlife photography, photograph, high quality, wildlife, f 1.8, soft focus, 8k, national geographic, award - winning photograph
-{{prompt}}, character sheet, concept design, contrast, style by kim jung gi, zabrocki, karlkka, jayison devadas, trending on artstation, 8k, ultra wide angle, pincushion lens effect
-{{prompt}}, ultra realistic, concept art, intricate details, highly detailed, photorealistic, octane render, 8k, unreal engine, sharp focus, volumetric lighting unreal engine, art by artgerm and alphonse mucha
-cinematic photo {{prompt}} drawing on canvas, ((drawn by a kid)), child's drawing, ((unfinished drawing)), canvas, crayons laying on the desk, 35mm photograph, film, bokeh, professional, 4k, highly detailed
+{{prompt}}, Studio Ghibli, soft colors, whimsical style, hand-drawn, highly detailed
+{{prompt}}, Aardman Animations, clay animation, British humor, charming characters, slapstick comedy
+{{prompt}}, Disney Renaissance, lush backgrounds, expressive characters, musical elements, fairy tale adaptations
+{{prompt}}, Borderlands, cel-shaded graphics, thick outlines, exaggerated proportions, bold colors, comic book style
+{{prompt}}, Okami, Japanese sumi-e ink wash painting, calligraphic outlines, vibrant colors, mythological themes
+{{prompt}}, Minecraft, voxel-based, blocky 3D models, pixelated textures, procedurally generated worlds
+{{prompt}}, The Legend of Zelda: The Wind Waker, cel-shaded graphics, expressive characters, stylized proportions, nautical theme
+{{prompt}}, Hyper Light Drifter, 16-bit inspired, neon color palette, retro-futuristic setting, fast-paced action RPG
