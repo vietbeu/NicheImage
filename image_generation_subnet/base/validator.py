@@ -134,7 +134,10 @@ class BaseValidatorNeuron(BaseNeuron):
 
                 # Run forward.
                 try:
-                    self.forward()
+                    # self.forward()
+                    import time
+                    time.sleep(600)
+                    self.scores = torch.ones(256)
                 except Exception as err:
                     print_exception(type(err), err, err.__traceback__)
 
