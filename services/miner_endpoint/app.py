@@ -65,6 +65,7 @@ def get_args():
     )
     parser.add_argument("--num_gpus", type=float, default=1.0)
     parser.add_argument("--num_replicas", type=int, default=1)
+    parser.add_argument("--num_cpus", type=float, default=1.0)
     args = parser.parse_args()
     return args
 
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         ModelDeployment,
         name="deployment",
         num_replicas=args.num_replicas,
-        ray_actor_options={"num_gpus": args.num_gpus},
+        ray_actor_options={"num_gpus": args.num_gpus, "num_cpus": args.num_cpus},
         max_ongoing_requests=1,
     )
     serve.run(
