@@ -15,6 +15,8 @@ from tqdm import tqdm
 import io
 import importlib
 import torch
+import bittensor as bt
+import cv2
 
 
 def make_inpaint_condition(image, image_mask):
@@ -83,16 +85,17 @@ def base64_to_pil_image(base64_image):
     image = base64.b64decode(base64_image)
     image = BytesIO(image)
     image = PIL.Image.open(image)
-    image = np.array(image)
-    image = PIL.Image.fromarray(image).convert("RGB")
+    image = image.convert("RGB")
     return image
 
 
-def pil_image_to_base64(image: Image.Image) -> str:
+def pil_image_to_base64(image: Image.Image, format="PNG") -> str:
+    if format not in ["JPEG", "PNG"]:
+        format = "JPEG"
     image_stream = io.BytesIO()
-    image.save(image_stream, format="PNG")
+    image = image.convert("RGB")
+    image.save(image_stream, format=format)
     base64_image = base64.b64encode(image_stream.getvalue()).decode("utf-8")
-
     return base64_image
 
 
@@ -136,4 +139,39 @@ def download_checkpoint(download_url, checkpoint_file):
                 file_stream.write(data)
                 progress_bar.update(len(data))
 
-    print("Download completed successfully.")
+    bt.logging.info("Download completed successfully.")
+
+def upscale_image(input_image, upscale, max_size_input=None):
+    H, W, C = input_image.shape
+    H = float(H)
+    W = float(W)
+    k = float(max_size_input) / max(H, W)
+    H *= k
+    W *= k
+    H = int(np.round(H / 64.0)) * 64
+    W = int(np.round(W / 64.0)) * 64
+    H *= upscale
+    W *= upscale
+    img = cv2.resize(input_image, (W, H), interpolation=cv2.INTER_LANCZOS4 if upscale > 1 else cv2.INTER_AREA)
+    img = img.round().clip(0, 255).astype(np.uint8)
+    return img
+
+def resize_image(input_image, resolution, short=False, interpolation=None):
+    W, H = input_image.size
+
+    H = float(H)
+    W = float(W)
+    if short:
+        k = float(resolution) / min(H, W)  # k>1 放大， k<1 缩小
+    else:
+        k = float(resolution) / max(H, W)  # k>1 放大， k<1 缩小
+    H *= k
+    W *= k
+    H = int(np.round(H / 64.0)) * 64
+    W = int(np.round(W / 64.0)) * 64
+
+    if interpolation is None:
+        interpolation = PIL.Image.LANCZOS if k > 1 else PIL.Image.BILINEAR
+    img = input_image.resize((W, H), resample=interpolation)
+
+    return img

@@ -187,13 +187,6 @@ def add_args(cls, parser):
         )
 
         parser.add_argument(
-            "--proxy.miner_score_threshold",
-            type=float,
-            help="Threshold for filtering out miners before sampling selecting",
-            default=0.1,
-        )
-
-        parser.add_argument(
             "--proxy.checking_probability",
             type=float,
             help="Probability of checking if a miner is valid",
@@ -252,6 +245,41 @@ def add_args(cls, parser):
             help="The endpoint to get the reward for FaceToMany.",
             default="http://nicheimage.nichetensor.com/reward/Llama3_70b",
         )
+
+        parser.add_argument(
+            "--reward_url.DreamShaperXL",
+            type=str,
+            help="",
+            default="http://nicheimage.nichetensor.com/reward/DreamShaperXL",
+        )
+
+        parser.add_argument(
+            "--reward_url.JuggernautXL",
+            type=str,
+            help="",
+            default="http://nicheimage.nichetensor.com/reward/JuggernautXL",
+        )
+
+        parser.add_argument(
+            "--reward_url.SUPIR",
+            type=str,
+            help="",
+            default="http://nicheimage.nichetensor.com/reward/SUPIR",
+        )
+        parser.add_argument(
+            "--reward_url.FluxSchnell",
+            type=str,
+            help="",
+            default="http://nicheimage.nichetensor.com/reward/FluxSchnell",
+        )
+
+        parser.add_argument(
+            "--reward_url.Kolors",
+            type=str,
+            help="",
+            default="http://nicheimage.nichetensor.com/reward/Kolors",
+        )
+
         # TODO: add more reward endpoints for categories
 
         parser.add_argument(
@@ -276,26 +304,32 @@ def add_args(cls, parser):
         )
 
         parser.add_argument(
-            "--debug_validator",
+            "--share_response",
             action="store_true",
-            help="If set, we will run the validator in debug mode.",
+            help="If set, validator will share miners' response to owner endpoint.",
             default=False,
         )
 
         parser.add_argument(
-            "--proxy.only_proxy_quota",
+            "--offline_reward.enable",
             action="store_true",
-            help="If set, we will only use the proxy quota.",
+            help="",
             default=False,
         )
 
         parser.add_argument(
-            "--only_organic",
-            action="store_true",
-            help="If set, we will only use organic requests.",
-            default=False,
+            "--offline_reward.validator_endpoint",
+            type=str,
+            help="",
+            default="http://127.0.0.1:13300/generate",
         )
-        # TODO: add more challenge endpoints for categories
+
+        parser.add_argument(
+            "--offline_reward.redis_endpoint",
+            type=str,
+            help="",
+            default="http://127.0.0.1:6379",
+        )
 
     else:
         parser.add_argument(

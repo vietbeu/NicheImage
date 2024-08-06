@@ -1,4 +1,4 @@
-import time
+import time, asyncio
 import os
 import bittensor as bt
 import random
@@ -12,12 +12,16 @@ import yaml
 import threading
 import math
 import queue
+import json
 from copy import deepcopy
 from image_generation_subnet.validator.offline_challenge import (
     get_backup_image,
     get_backup_prompt,
     get_backup_llm_prompt,
 )
+from datetime import datetime
+from services.offline_rewarding.redis_client import RedisClient
+from services.offline_rewarding.reward_app import RewardApp
 
 MODEL_CONFIGS = yaml.load(
     open("generation_models/configs/model_config.yaml"), yaml.FullLoader
@@ -134,7 +138,7 @@ def initialize_challenge_urls(config):
             "main": [config.challenge.prompt, config.challenge.image],
             "backup": [get_backup_prompt, get_backup_image],
         },
-        "controlnet_txt2img": {
+        "instantid": {
             "main": [
                 config.challenge.prompt,
                 config.challenge.image,
@@ -152,6 +156,21 @@ def initialize_challenge_urls(config):
             "main": [config.challenge.llm_prompt],
             "backup": [get_backup_llm_prompt],
         },
+        "controlnet": {
+            "main": [config.challenge.prompt, config.challenge.image],
+            "backup": [get_backup_prompt, get_backup_image],
+        },
+        "upscale": {
+            "main": [config.challenge.image],
+            "backup": [get_backup_image]
+        },
+        "ip_adapter": {
+            "main": [
+                config.challenge.prompt,
+                config.challenge.image,
+            ],
+            "backup": [get_backup_prompt, get_backup_image],
+        },
     }
     return challenge_urls
 
@@ -164,35 +183,39 @@ def initialize_nicheimage_catalogue(config):
                 "supporting_pipelines"
             ],
             "reward_url": ig_subnet.validator.get_reward_GoJourney,
+            "reward_type": "custom_offline",
             "timeout": 12,
             "inference_params": {},
             "synapse_type": ig_subnet.protocol.ImageGenerating,
         },
-        "DreamShaper": {
+        "DreamShaperXL": {
             "model_incentive_weight": 0.06,
-            "supporting_pipelines": MODEL_CONFIGS["DreamShaper"]["params"][
+            "supporting_pipelines": MODEL_CONFIGS["DreamShaperXL"]["params"][
                 "supporting_pipelines"
             ],
-            "reward_url": config.reward_url.DreamShaper,
+            "reward_url": config.reward_url.DreamShaperXL,
+            "reward_type": "image",
             "inference_params": {
-                "num_inference_steps": 30,
-                "width": 512,
-                "height": 768,
-                "guidance_scale": 7,
-                "negative_prompt": "out of frame, nude, duplicate, watermark, signature, mutated, text, blurry, worst quality, low quality, artificial, texture artifacts, jpeg artifacts",
+                "num_inference_steps": 8,
+                "width": 1024,
+                "height": 1024,
+                "guidance_scale": 2,
             },
-            "timeout": 12,
+            "timeout": 16,
             "synapse_type": ig_subnet.protocol.ImageGenerating,
         },
-        "RealisticVision": {
-            "supporting_pipelines": MODEL_CONFIGS["RealisticVision"]["params"][
+        "JuggernautXL": {
+            "supporting_pipelines": MODEL_CONFIGS["JuggernautXL"]["params"][
                 "supporting_pipelines"
             ],
             "model_incentive_weight": 0.18,
-            "reward_url": config.reward_url.RealisticVision,
+            "reward_url": config.reward_url.JuggernautXL,
+            "reward_type": "image",
             "inference_params": {
                 "num_inference_steps": 30,
-                "negative_prompt": "out of frame, nude, duplicate, watermark, signature, mutated, text, blurry, worst quality, low quality, artificial, texture artifacts, jpeg artifacts",
+                "width": 1024,
+                "height": 1024,
+                "guidance_scale": 6,
             },
             "timeout": 12,
             "synapse_type": ig_subnet.protocol.ImageGenerating,
@@ -203,6 +226,7 @@ def initialize_nicheimage_catalogue(config):
             ],
             "model_incentive_weight": 0.29,
             "reward_url": config.reward_url.RealitiesEdgeXL,
+            "reward_type": "image",
             "inference_params": {
                 "num_inference_steps": 7,
                 "width": 1024,
@@ -216,8 +240,9 @@ def initialize_nicheimage_catalogue(config):
             "supporting_pipelines": MODEL_CONFIGS["AnimeV3"]["params"][
                 "supporting_pipelines"
             ],
-            "model_incentive_weight": 0.31,
+            "model_incentive_weight": 0.27,
             "reward_url": config.reward_url.AnimeV3,
+            "reward_type": "image",
             "inference_params": {
                 "num_inference_steps": 25,
                 "width": 1024,
@@ -236,6 +261,7 @@ def initialize_nicheimage_catalogue(config):
             "timeout": 64,
             "synapse_type": ig_subnet.protocol.TextGenerating,
             "reward_url": config.reward_url.Gemma7b,
+            "reward_type": "text",
             "inference_params": {},
         },
         "StickerMaker": {
@@ -246,6 +272,7 @@ def initialize_nicheimage_catalogue(config):
             "timeout": 64,
             "synapse_type": ig_subnet.protocol.ImageGenerating,
             "reward_url": config.reward_url.StickerMaker,
+            "reward_type": "image",
             "inference_params": {"is_upscale": False},
         },
         "FaceToMany": {
@@ -256,6 +283,7 @@ def initialize_nicheimage_catalogue(config):
             "timeout": 64,
             "synapse_type": ig_subnet.protocol.ImageGenerating,
             "reward_url": config.reward_url.FaceToMany,
+            "reward_type": "image",
             "inference_params": {},
         },
         "Llama3_70b": {
@@ -266,7 +294,62 @@ def initialize_nicheimage_catalogue(config):
             "timeout": 128,
             "synapse_type": ig_subnet.protocol.TextGenerating,
             "reward_url": config.reward_url.Llama3_70b,
+            "reward_type": "text",
             "inference_params": {},
+        },
+        "DallE": {
+            "supporting_pipelines": MODEL_CONFIGS["DallE"]["params"][
+                "supporting_pipelines"
+            ],
+            "reward_url": ig_subnet.validator.get_reward_dalle,
+            "reward_type": "custom_offline",
+            "timeout": 36,
+            "inference_params": {},
+            "synapse_type": ig_subnet.protocol.ImageGenerating,
+            "model_incentive_weight": 0.04,
+        },
+        "SUPIR": {
+            "supporting_pipelines": MODEL_CONFIGS["SUPIR"]["params"][
+                "supporting_pipelines"
+            ],
+            "reward_url": config.reward_url.SUPIR,
+            "reward_type": "image",
+            "timeout": 180,
+            "inference_params": {},
+            "synapse_type": ig_subnet.protocol.ImageGenerating,
+            "model_incentive_weight": 0.00,
+        },
+        "FluxSchnell": {
+            "supporting_pipelines": MODEL_CONFIGS["FluxSchnell"]["params"][
+                "supporting_pipelines"
+            ],
+            "model_incentive_weight": 0.0,
+            "reward_url": config.reward_url.FluxSchnell,
+            "reward_type": "image",
+            "inference_params": {
+                "num_inference_steps": 4,
+                "width": 1024,
+                "height": 1024,
+                "guidance_scale": 0.0,
+            },
+            "timeout": 48,
+            "synapse_type": ig_subnet.protocol.ImageGenerating,
+        },
+        "Kolors": {
+            "supporting_pipelines": MODEL_CONFIGS["Kolors"]["params"][
+                "supporting_pipelines"
+            ],
+            "model_incentive_weight": 0.0,
+            "reward_url": config.reward_url.Kolors,
+            "reward_type": "image",
+            "inference_params": {
+                "num_inference_steps": 30,
+                "width": 1024,
+                "height": 1024,
+                "guidance_scale": 5.0,
+            },
+            "timeout": 32,
+            "synapse_type": ig_subnet.protocol.ImageGenerating,
         },
     }
     return nicheimage_catalogue
@@ -288,26 +371,53 @@ class Validator(BaseValidatorNeuron):
             list(self.nicheimage_catalogue.keys()),
             time_per_loop=self.config.loop_base_time,
         )
-        try:
-            self.validator_proxy = ValidatorProxy(self)
-            bt.logging.info("Validator proxy started succesfully")
-        except Exception:
-            if self.config.proxy.port:
+        self.offline_reward = self.config.offline_reward.enable
+        self.supporting_offline_reward_types = ["image", "custom_offline"]
+        self.generate_response_offline_types = ["image"]
+        if self.offline_reward:
+            self.redis_client = RedisClient(url=self.config.offline_reward.redis_endpoint)
+            self.reward_app = RewardApp(self)
+            self.end_loop_event = threading.Event()
+            threading.Thread(target=self.clear_data, daemon=True).start()
+            threading.Thread(target = self.generate_validator_responses, daemon=True).start()
+            threading.Thread(target = self.reward_offline, daemon=True).start()
+        
+        if self.config.proxy.port:
+            try:
+                self.validator_proxy = ValidatorProxy(self)
+                bt.logging.info("Validator proxy started succesfully")
+            except Exception:
                 bt.logging.warning(
                     "Warning, proxy did not start correctly, so no one can query through your validator. Error message: "
                     + traceback.format_exc()
                 )
-            else:
-                bt.logging.warning("Share validator info to owner failed")
+            
 
     def forward(self):
         """
-        Validator forward pass. Consists of:
-        - Querying all miners to get their model_name
-        - Forwarding requests to miners
-        - Calculating rewards based on responses
-        - Updating scores based on rewards
-        - Saving the state
+        Validator synthetic forward pass. Consists of:
+        - Querying all miners to get their model_name and total_volume
+        - Create serving queue, here is pseudo code:
+            ```
+                synthentic_queue = Queue()
+                for uid, total_volume_this_validator in all_uids_info:
+                    for _ in range(total_volume_this_validator*0.8):
+                        synthentic_queue.put(uid)
+                shuffle(synthentic_queue)
+
+                organic_queue = Queue()
+                for uid, total_volume_this_validator in all_uids_info:
+                    for _ in range(total_volume_this_validator*0.2):
+                        organic_queue.put(uid)
+                shuffle(organic_queue)
+            ```
+        - Forwarding requests to miners in multiple thread to ensure total time is around 600 seconds. In each thread, we do:
+            - Calculating rewards if needed
+            - Updating scores based on rewards
+            - Saving the state
+        - Normalize weights based on incentive_distribution
+        - SET WEIGHTS!
+        - Sleep for 600 seconds if needed
         """
 
         bt.logging.info("Updating available models & uids")
@@ -317,6 +427,7 @@ class Validator(BaseValidatorNeuron):
         loop_start = time.time()
         self.miner_manager.update_miners_identity()
         self.query_queue.update_queue(self.miner_manager.all_uids_info)
+
         for (
             model_name,
             uids,
@@ -339,8 +450,7 @@ class Validator(BaseValidatorNeuron):
 
         for thread in threads:
             thread.join()
-        self.update_scores_on_chain()
-        self.save_state()
+
         bt.logging.info(
             "Loop completed, uids info:\n",
             str(self.miner_manager.all_uids_info).replace("},", "},\n"),
@@ -354,6 +464,34 @@ class Validator(BaseValidatorNeuron):
             )
             time.sleep(loop_base_time - actual_time_taken)
 
+        if self.offline_reward:
+            self.end_loop_event.set()
+            
+        self.update_scores_on_chain()
+        self.save_state()
+
+    def reward_offline(self):
+        """Calculate rewards for miner based on  validator responses (from cache) and miner responses"""
+        asyncio.get_event_loop().run_until_complete(self.reward_app.dequeue_reward_message())
+        
+    def generate_validator_responses(self):
+        """Handle generating validator responses for base synapses and cache the results to score the miner later"""
+        asyncio.get_event_loop().run_until_complete(self.reward_app.dequeue_base_synapse_message())
+
+    def clear_data(self):
+        """Process when the duration of one loop is complete."""
+        while True:
+            if self.end_loop_event.is_set():
+                self.redis_client.get_stream_info(self.reward_app.reward_stream_name)
+                self.redis_client.get_stream_info(self.reward_app.base_synapse_stream_name)
+                self.reward_app.show_total_uids_and_rewards()
+                self.reward_app.reset_total_uids_and_rewards()
+                self.end_loop_event.clear()
+            time.sleep(10)
+    def enqueue_synapse_for_validation(self, base_synapse):
+        """Push base synapse to queue for generating validator response."""
+        self.redis_client.publish_to_stream(stream_name = self.redis_client.base_synapse_stream_name, message = {"data": json.dumps(base_synapse.deserialize())})
+
     def async_query_and_reward(
         self,
         model_name: str,
@@ -361,9 +499,12 @@ class Validator(BaseValidatorNeuron):
         should_rewards: list[int],
     ):
         dendrite = bt.dendrite(self.wallet)
-        pipeline_type = random.choice(
-            self.nicheimage_catalogue[model_name]["supporting_pipelines"]
-        )
+        if model_name == "RealitiesEdgeXL" and datetime.utcnow() < datetime(2024, 6, 12, 0, 0, 0):
+            pipeline_type = "txt2img"
+        else:
+            pipeline_type = random.choice(
+                self.nicheimage_catalogue[model_name]["supporting_pipelines"]
+            )
         reward_url = self.nicheimage_catalogue[model_name]["reward_url"]
         uids_should_rewards = list(zip(uids, should_rewards))
         synapses, batched_uids_should_rewards = self.prepare_challenge(
@@ -375,6 +516,9 @@ class Validator(BaseValidatorNeuron):
             if not synapse:
                 continue
             base_synapse = synapse.copy()
+            if self.offline_reward and any([should_reward for should_reward in should_rewards]) and self.nicheimage_catalogue[model_name]["reward_type"] in self.generate_response_offline_types:
+                self.enqueue_synapse_for_validation(base_synapse)
+                
             axons = [self.metagraph.axons[int(uid)] for uid in uids]
             responses = dendrite.query(
                 axons=axons,
@@ -402,23 +546,33 @@ class Validator(BaseValidatorNeuron):
             store_thread.start()
 
             if reward_uids:
-                if callable(reward_url):
-                    reward_uids, rewards = reward_url(
-                        base_synapse, reward_responses, reward_uids
-                    )
+                if self.offline_reward and self.nicheimage_catalogue[model_name]["reward_type"] in self.supporting_offline_reward_types:
+                    ig_subnet.validator.get_reward_offline(base_synapse, reward_responses, reward_uids, self.nicheimage_catalogue[model_name].get("timeout", 12), self.redis_client)
                 else:
-                    reward_uids, rewards = ig_subnet.validator.get_reward(
-                        reward_url,
-                        base_synapse,
-                        reward_responses,
-                        reward_uids,
-                        self.nicheimage_catalogue[model_name].get("timeout", 12),
-                        self.miner_manager,
-                    )
+                    if callable(reward_url):
+                        reward_uids, rewards = reward_url(
+                            base_synapse, reward_responses, reward_uids
+                        )
+                    else:
+                        reward_uids, rewards = ig_subnet.validator.get_reward(
+                            reward_url,
+                            base_synapse,
+                            reward_responses,
+                            reward_uids,
+                            self.nicheimage_catalogue[model_name].get("timeout", 12),
+                            self.miner_manager,
+                        )
 
-                bt.logging.info(f"Scored responses: {rewards}")
+                        # Scale Reward based on Miner Volume
+                    for i, uid in enumerate(reward_uids):
+                        if rewards[i] > 0:
+                            rewards[i] = rewards[i] * (
+                                0.6 + 0.4 * self.miner_manager.all_uids_info[uid]["reward_scale"]
+                            )
 
-                self.miner_manager.update_scores(reward_uids, rewards)
+                    bt.logging.info(f"Scored responses: {rewards}")
+
+                    self.miner_manager.update_scores(reward_uids, rewards)
             store_thread.join()
 
     def prepare_challenge(self, uids_should_rewards, model_name, pipeline_type):
@@ -431,6 +585,7 @@ class Validator(BaseValidatorNeuron):
             ]
         )
         batch_size = min(4, 1 + model_miner_count // 4)
+        
         random.shuffle(uids_should_rewards)
         batched_uids_should_rewards = [
             uids_should_rewards[i * batch_size : (i + 1) * batch_size]
@@ -462,6 +617,9 @@ class Validator(BaseValidatorNeuron):
     def store_miner_output(
         self, storage_url, responses: list[bt.Synapse], uids, validator_uid
     ):
+        if not self.config.share_response:
+            return
+        
         for uid, response in enumerate(responses):
             if not response.is_success:
                 continue

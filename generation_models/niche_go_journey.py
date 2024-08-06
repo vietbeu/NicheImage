@@ -1,6 +1,7 @@
 from .base_model import BaseModel
 import os
 import httpx
+import bittensor as bt
 
 API_KEY = os.getenv("GOJOURNEY_API_KEY")
 PROCESS_MODE = os.getenv("PROCESS_MODE", "relax")
@@ -32,10 +33,10 @@ class NicheGoJourney(BaseModel):
             }
             with httpx.Client() as client:
                 imagine_response = client.post(
-                    imagine_endpoint, headers=headers, json=data
+                    imagine_endpoint, headers=headers, json=data, timeout=32
                 )
                 imagine_response = imagine_response.json()
-                print(imagine_response, flush=True)
+                bt.logging.info(imagine_response)
                 task_id = imagine_response["task_id"]
                 fetch_response = client.post(fetch_endpoint, json={"task_id": task_id})
                 fetch_response = fetch_response.json()
