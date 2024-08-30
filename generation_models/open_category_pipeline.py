@@ -28,7 +28,6 @@ class OpenCategoryPipeline(BaseModel):
             image_output = convert_image_to_png_format(output.images[0])
             image_width, image_height = image_output.size
             image_format = image_output.format
-            print("aaaa :",image_output, image_width, image_height)
             # WARNING: The image must be saved in PNG format. 
             assert image_format == "PNG"  
 
