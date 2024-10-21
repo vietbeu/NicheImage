@@ -6,6 +6,7 @@ import image_generation_subnet
 from image_generation_subnet.protocol import (
     ImageGenerating,
     TextGenerating,
+    MultiModalGenerating,
     Information,
 )
 import traceback
@@ -79,6 +80,23 @@ class Miner(BaseMinerNeuron):
             self.num_processing_requests -= 1
         return synapse
 
+    async def forward_multimodal(self, synapse: MultiModalGenerating) -> MultiModalGenerating:
+        if synapse.request_dict:
+            return await self.forward_info_legacy(synapse)
+        self.num_processing_requests += 1
+        self.total_request_in_interval += 1
+        try:
+            bt.logging.info(
+                f"Processing {self.num_processing_requests} requests, synapse input: {synapse.prompt}"
+            )
+            synapse.limit_params()
+            synapse = await image_generation_subnet.miner.generate(self, synapse)
+            self.num_processing_requests -= 1
+        except Exception as e:
+            bt.logging.warning(f"Error in forward_multimodal: {e}")
+            self.num_processing_requests -= 1
+        return synapse
+
     async def forward_info(self, synapse: Information) -> Information:
         synapse.response_dict = self.miner_info
         return synapse
@@ -139,6 +157,9 @@ class Miner(BaseMinerNeuron):
     async def blacklist_text(self, synapse: TextGenerating) -> Tuple[bool, str]:
         return await self.blacklist(synapse)
 
+    async def blacklist_multimodal(self, synapse: MultiModalGenerating) -> Tuple[bool, str]:
+        return await self.blacklist(synapse)
+
     async def priority(self, synapse: ImageGenerating) -> float:
         caller_uid = self.metagraph.hotkeys.index(
             synapse.dendrite.hotkey
@@ -165,6 +186,9 @@ if __name__ == "__main__":
                 start_time = time.time()
                 miner.total_request_in_interval = 0
             try:
+                bt.logging.debug("Syncing metagraph")
+                miner.resync_metagraph()
+                bt.logging.debug("Synced metagraph")
                 miner.volume_per_validator = image_generation_subnet.utils.volume_setting.get_volume_per_validator(
                     miner.metagraph,
                     miner.config.miner.total_volume,

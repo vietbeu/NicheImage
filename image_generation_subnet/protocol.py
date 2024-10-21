@@ -113,6 +113,8 @@ class ImageGenerating(bt.Synapse):
                 "output": self.response_dict
             }
         else:
+            if self.model_name != "FluxSchnell":
+                return
             storage_url = storage_url + "/upload-base64-item"
             data = {
                 "image": self.image,
@@ -188,11 +190,124 @@ class TextGenerating(bt.Synapse):
         }
 
     def store_response(self, storage_url: str, uid, validator_uid):
-        storage_url = storage_url + "/upload-llm-item"
+        pass
+
+class MultiModalGenerating(bt.Synapse):
+    prompt: str = pydantic.Field(
+        default="",
+        title="Prompt",
+        description="Prompt for generation",
+    )
+    image_url: str = pydantic.Field(
+        default="",
+        title="",
+        description="URL of conditional image",
+    )
+
+    seed: int = pydantic.Field(
+        default=0,
+        title="Seed",
+        description="Seed for generation",
+    )
+
+    request_dict: dict = pydantic.Field(
+        default={},
+        title="Dictionary contains request",
+        description="Dict contains arbitary information",
+    )
+
+    model_name: str = pydantic.Field(
+        default="",
+        title="",
+        description="Name of the model used for generation",
+    )
+
+    pipeline_params: dict = pydantic.Field(
+        default={},
+        title="Pipeline Params",
+        description="Dictionary of additional parameters for generation",
+    )
+    pipeline_type: str = pydantic.Field(
+        default="visual_question_answering",
+        title="Pipeline Type",
+        description="Type of pipeline used for generation",
+    )
+
+    prompt_output: typing.Optional[dict] = {}
+
+    def miner_update(self, update: dict):
+        self.prompt_output = update
+
+    def deserialize_input(self) -> dict:
+        message_content = [
+            {
+                "type": "text",
+                "text": self.prompt
+            }
+        ]
+        if self.image_url:
+            message_content.append({
+            "type": "image_url",
+            "image_url": {
+                "url": self.image_url
+            },
+        })
+
+        messages = [
+            {
+                "role": "user", 
+                "content": message_content
+            }
+        ]
+
+        deserialized_input = {
+            "model": MODEL_CONFIG[self.model_name].get("repo_id", self.model_name),
+            "prompt": [
+                self.prompt,
+            ],
+            "image_url": self.image_url,
+            "pipeline_type": self.pipeline_type,
+            "seed": self.seed,
+            "messages": messages
+        }
+        logprobs = self.pipeline_params.get("logprobs")
+        if logprobs:
+            self.pipeline_params["top_logprobs"] = copy.deepcopy(self.pipeline_params["logprobs"])
+            self.pipeline_params["logprobs"] = True        
+        deserialized_input.update(self.pipeline_params)
+
+        return deserialized_input
+    
+    def limit_params(self):
+        for k, v in self.pipeline_params.items():
+            if k == "max_tokens":
+                self.pipeline_params[k] = min(8192, v)
+        self.pipeline_params = self.pipeline_params
+        
+    def deserialize(self) -> dict:
+        return {
+            "prompt_output": self.prompt_output,
+            "prompt": self.prompt,
+            "model_name": self.model_name,
+            "seed": self.seed
+        }
+
+    def deserialize_response(self):
+        minimized_prompt_output: dict = copy.deepcopy(self.prompt_output)
+        minimized_prompt_output['choices'][0].pop("logprobs")
+        return {
+            "prompt_output": minimized_prompt_output,
+            "prompt_input": self.prompt,
+            "model_name": self.model_name,
+        }
+
+    def store_response(self, storage_url: str, uid, validator_uid):
+        storage_url = storage_url + "/upload-multimodal-item"
         minimized_prompt_output: dict = copy.deepcopy(self.prompt_output)
         minimized_prompt_output['choices'][0].pop("logprobs")
         data = {
-            "prompt_input": self.prompt_input,
+            "prompt_input": self.prompt,
+            "image_url": self.image_url,
             "prompt_output": minimized_prompt_output,
             "metadata": {
                 "miner_uid": uid,
